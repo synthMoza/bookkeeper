@@ -20,9 +20,11 @@ class MemoryRepository(AbstractRepository[T]):
     def add(self, obj: T) -> int:
         if getattr(obj, 'pk', None) != 0:
             raise ValueError(f'trying to add object {obj} with filled `pk` attribute')
+
         pk = next(self._counter)
         self._container[pk] = obj
         obj.pk = pk
+
         return pk
 
     def get(self, pk: int) -> T | None:
