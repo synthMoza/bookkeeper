@@ -1,0 +1,67 @@
+TableWidget {
+    color: #A6A6A6;
+    gridline-color: #2C3035;
+    border:none;
+    border-radius: 4px;
+    background-color: #1A1E23;
+    selection-background-color: #21262D;
+}
+
+MainWindow {
+    background-color: #2C313B;
+}
+
+QHeaderView::section
+{
+	background-color:#343C48;
+	border-style:none;
+	color: #E6E6E6;
+	font-family: 'Montserrat', sans-serif;
+}
+
+CommonButton {
+    background-color: #343C48;
+    color: #E6E6E6;
+    border-radius: 4px;
+    padding: 4px 2px;
+}
+
+CommonButton::hover {
+    border: 2px solid #A6A6A6;
+    background-color: #343C48;
+    color: #E6E6E6;
+    border-radius: 4px;
+    padding: 4px 2px;
+}
+
+QLabel {
+    color: #E6E6E6;
+}
+
+CategoriesWidget {
+    background-color: #1A1E23;
+    color: #A6A6A6;
+    border-radius: 4px;
+}
+
+ExpensesAddWidget:fields {
+    background-color: #1A1E23;
+}
+
+QLineEdit {
+    background-color: #1A1E23;
+    color: #A6A6A6;
+    border-radius: 2px;
+    padding: 2px 4px;
+}
+
+QDateTimeEdit {
+    background-color: #1A1E23;
+    color: #A6A6A6;
+    border-radius: 2px;
+    padding: 1px 4px;
+}
+
+QScrollBar {
+
+}
