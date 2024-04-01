@@ -2,7 +2,7 @@ from inspect import get_annotations
 
 from bookkeeper.repository.abstract_repository import AbstractRepository, T
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any, Dict, Union, get_origin, get_args
 
 import sqlite3
 
@@ -86,28 +86,32 @@ class SQLiteRepository(AbstractRepository[T]):
 
         return [self._to_obj(raw_obj, cur.description) for raw_obj in raw_objs]
 
-    datetime_format = '%d/%m/%y %H:%M:%S.%f'
+    datetime_format = '%Y-%m-%d %H:%M:%S'
 
     def _attr_to_sql(self, v):
         if isinstance(v, str):
             return v
         elif isinstance(v, datetime):
             return f'{datetime.strftime(v, self.datetime_format)}'
+        elif v is None:
+            return 'NULL'
         else:
             return str(v)
 
     def _sql_to_attr(self, f, v):
-        if f == str:
+        if v == 'NULL':
+            return None
+        elif str == f or str in get_args(f):
             v = v.strip('\'')
             return str(v)
-        elif f == datetime:
+        elif datetime == f or datetime in get_args(f):
             v = v.strip('\'')
             return datetime.strptime(v, self.datetime_format)
         else:
             return v
 
     def _to_obj(self, raw_obj, desc):
-        obj = self.generic_type()
+        obj = self.generic_type.__new__(self.generic_type)
         setattr(obj, 'pk', raw_obj[0])
         for i, f in enumerate(desc):
             if f[0] in self.fields:

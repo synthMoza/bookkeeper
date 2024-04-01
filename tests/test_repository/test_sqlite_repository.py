@@ -99,6 +99,12 @@ def test_delete_all(repo, custom_class):
     repo.delete_all()
     assert repo.get_all() == []
 
+def test_none_field(repo, custom_class):
+    obj = custom_class()
+    obj.foo = None
+    pk = repo.add(obj)
+    assert repo.get(pk).foo == obj.foo
+
 
 # Тесты FOREIGN_KEY
 
