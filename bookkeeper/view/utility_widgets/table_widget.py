@@ -1,4 +1,4 @@
-from PySide6 import QtWidgets
+from PySide6 import QtWidgets, QtGui, QtCore
 
 
 class TableWidget(QtWidgets.QTableWidget):
