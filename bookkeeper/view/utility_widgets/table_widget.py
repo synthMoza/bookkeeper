@@ -14,3 +14,6 @@ class TableWidget(QtWidgets.QTableWidget):
         header.setStretchLastSection(True)
         self.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
         self.verticalHeader().hide()
+        # self.setStyleSheet("""
+        #
+        # """)

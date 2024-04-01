@@ -5,11 +5,15 @@ from PySide6 import QtWidgets
 from bookkeeper.view.main_widgets.expenses_view_widget import ExpensesViewWidget
 from bookkeeper.view.main_widgets.expenses_add_widget import ExpensesAddWidget
 from bookkeeper.view.main_widgets.budget_view_widget import BudgetViewWidget
-from bookkeeper.utils import read_tree
+
+from bookkeeper.controllers.categories_controller import CategoriesController
+from bookkeeper.controllers.expenses_controller import ExpensesController
+from bookkeeper.controllers.budget_controller import BudgetController
 
 from bookkeeper.repository.sqlite_repository import SQLiteRepository
 from bookkeeper.models.category import Category
 from bookkeeper.models.expense import Expense
+from bookkeeper.models.budget import Budget
 
 
 class MainWindow(QtWidgets.QWidget):
@@ -23,18 +27,24 @@ class MainWindow(QtWidgets.QWidget):
 
         self.categories_repository = SQLiteRepository(self.db_file, Category)
         self.expenses_repository = SQLiteRepository(self.db_file, Expense)
+        self.budget_repository = SQLiteRepository(self.db_file, Budget)
+
+        # controllers
+        self.expenses_controller = ExpensesController(self.expenses_repository, self.categories_repository)
+        self.categories_controller = CategoriesController(self.categories_repository)
+        self.budget_controller = BudgetController(self.expenses_repository, self.budget_repository)
 
         # main widgets
-        self.expenses_view_widget = ExpensesViewWidget(self.categories_repository, self.expenses_repository)
-        self.budget_view_widget = BudgetViewWidget(self.expenses_repository)
-        self.expenses_add_widget = ExpensesAddWidget(self.categories_repository, self.expenses_repository)
+        self.expenses_view_widget = ExpensesViewWidget(self.expenses_controller)
+        self.budget_view_widget = BudgetViewWidget(self.budget_controller)
+        self.expenses_add_widget = ExpensesAddWidget(self.expenses_controller, self.categories_controller)
 
         # set up signals
-        self.expenses_add_widget.update_expenses_signal.connect(self.expenses_view_widget.update_expenses)
         self.expenses_view_widget.edit_expense_signal.connect(self.expenses_add_widget.edit_expense)
+        self.categories_controller.delete_expense_signal.connect(self.expenses_controller.delete_expenses_of_category)
 
         # initial trigger
-        self.expenses_add_widget.update_expenses()
+        self.expenses_controller.update_model()
 
         # set up layouts
         self.horizontal_layout = QtWidgets.QHBoxLayout()

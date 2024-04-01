@@ -1,11 +1,10 @@
-import PySide6.QtCore
 from PySide6 import QtWidgets, QtCore
 
 from bookkeeper.view.utility_widgets.labeled_input import *
 from bookkeeper.view.main_widgets.categories_widget import CategoriesWidget
-from bookkeeper.repository.abstract_repository import AbstractRepository
+from bookkeeper.controllers.expenses_controller import ExpensesController
+from bookkeeper.controllers.categories_controller import CategoriesController
 from bookkeeper.models.expense import Expense
-from bookkeeper.models.category import Category
 
 
 class CommonButton(QtWidgets.QPushButton):
@@ -17,15 +16,13 @@ class CommonButton(QtWidgets.QPushButton):
 
 
 class ExpensesAddWidget(QtWidgets.QWidget):
-    update_expenses_signal = QtCore.Signal()
-
-    def __init__(self, categories_repo: AbstractRepository[Category],
-                 expenses_repo: AbstractRepository[Expense], *args, **kwargs):
+    def __init__(self, expenses_controller: ExpensesController, categories_controller: CategoriesController,
+                 *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.layout = QtWidgets.QVBoxLayout()
-        self.categories_repo = categories_repo
-        self.expenses_repo = expenses_repo
+        self.expenses_controller = expenses_controller
+        self.categories_controller = categories_controller
 
         self.edit_pk = 0
 
@@ -33,7 +30,7 @@ class ExpensesAddWidget(QtWidgets.QWidget):
         self.label = QtWidgets.QLabel(self.text)
 
         self.layout.addWidget(self.label)
-        categories_widget = CategoriesWidget(categories_repo)
+        categories_widget = CategoriesWidget(categories_controller, expenses_controller)
 
         self.fields = {
             "sum": LabeledFloatInput('Сумма', ''),
@@ -44,8 +41,6 @@ class ExpensesAddWidget(QtWidgets.QWidget):
         }
 
         categories_widget.update_category_text_signal.connect(self.fields["category"].set_placeholder)
-        categories_widget.delete_expenses_of_category_signal.connect(self.delete_expenses_of_category)
-        categories_widget.update_expenses_signal.connect(self.update_expenses)
 
         for label, labeled_input in self.fields.items():
             self.layout.addWidget(labeled_input)
@@ -75,16 +70,6 @@ class ExpensesAddWidget(QtWidgets.QWidget):
 
         self.setLayout(self.layout)
 
-    @QtCore.Slot(int)
-    def delete_expenses_of_category(self, category_id: int):
-        expenses = self.expenses_repo.get_all({"category_id": category_id})
-        for expense in expenses:
-            self.expenses_repo.delete(expense.pk)
-        self.categories_repo.get_all()
-
-    def update_expenses(self):
-        self.update_expenses_signal.emit()
-
     def clear_inputs(self):
         self.fields["sum"].input.clear()
         self.fields["commentary"].input.clear()
@@ -94,9 +79,12 @@ class ExpensesAddWidget(QtWidgets.QWidget):
         if not amount_text:
             return
 
-        category_id = self.fields["category_list"].get_current_category_id()
-        if category_id is None:
-            category_id = self.categories_repo.get_all({"name": self.fields["category"].input.text()})[0].pk
+        indexes = self.fields["category_list"].selectionModel().selectedIndexes()
+        if indexes:
+            index = indexes[0]
+            category_id = self.categories_controller.get_current_category_id(index)
+        else:
+            category_id = self.categories_controller.get_category_by_name(self.fields["category"].input.text()).pk
 
         date = self.fields["date"].get_datetime()
         comment = self.fields["commentary"].input.text()
@@ -110,10 +98,10 @@ class ExpensesAddWidget(QtWidgets.QWidget):
 
         if exists:
             expense.pk = self.edit_pk
-            self.expenses_repo.update(expense)
+            self.expenses_controller.update_expense(expense)
         else:
-            self.expenses_repo.add(expense)
-        self.update_expenses_signal.emit()
+            self.expenses_controller.add_expense(expense)
+        self.expenses_controller.update_model()
         self.clear_inputs()
 
     def cancel_edit(self):
@@ -123,7 +111,7 @@ class ExpensesAddWidget(QtWidgets.QWidget):
 
     def apply_edit(self):
         self.add_expense(True)
-        self.update_expenses()
+        self.expenses_controller.update_model()
         self.cancel_edit()  # clear inputs and reset buttons
 
     def edit_expense(self, pk: int):
@@ -134,7 +122,7 @@ class ExpensesAddWidget(QtWidgets.QWidget):
         self.right_button.setCurrentWidget(self.cancel_edit_button)
 
         # Fill fields with the values
-        expense = self.expenses_repo.get(pk)
+        expense = self.expenses_controller.get_expense(pk)
         self.fields["sum"].input.setText(str(expense.amount).replace('.', ','))
         self.fields["commentary"].input.setText(expense.comment)
-        self.fields["category"].input.setText(self.categories_repo.get(expense.category_id).name)
+        self.fields["category"].input.setText(self.categories_controller.get_category(expense.category_id).name)

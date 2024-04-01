@@ -25,10 +25,17 @@ class Expense:
     comment: str = ''
     pk: int = 0
 
-    def get_rows(self, repo: AbstractRepository) -> List[str]:
+    def get_rows(self, repo: AbstractRepository['Expense']) -> List[str]:
         return [
             self.date.strftime("%Y-%m-%d %H:%M:%S"),
             str(self.amount),
             repo.get(self.category_id).name,
             self.comment,
         ]
+
+    @classmethod
+    def delete_expenses_of_category(cls, repo: AbstractRepository['Expense'], category_id: int):
+        expenses = repo.get_all({"category_id": category_id})
+        for expense in expenses:
+            repo.delete(expense.pk)
+        self.categories_repo.get_all()

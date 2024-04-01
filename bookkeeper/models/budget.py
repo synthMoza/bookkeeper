@@ -2,16 +2,16 @@
 Описан класс, представляющий бюджет
 """
 
-from dataclasses import dataclass, field
-from datetime import timedelta
-from bookkeeper.models.category import Category
+from dataclasses import dataclass
 
 
 @dataclass(slots=True)
-class Expense:
+class Budget:
     """
     Бюджет
     """
-    duration: timedelta
-    sum: float
-    pk: int
+
+    interval: str
+    amount: float
+    limit_amount: float
+    pk: int = 0
