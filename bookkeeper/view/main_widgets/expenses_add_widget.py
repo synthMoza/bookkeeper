@@ -84,7 +84,11 @@ class ExpensesAddWidget(QtWidgets.QWidget):
             index = indexes[0]
             category_id = self.categories_controller.get_current_category_id(index)
         else:
-            category_id = self.categories_controller.get_category_by_name(self.fields["category"].input.text()).pk
+            category = self.categories_controller.get_category_by_name(self.fields["category"].input.text())
+            if category:
+                category_id = category.pk
+            else:
+                return  # no category
 
         date = self.fields["date"].get_datetime()
         comment = self.fields["commentary"].input.text()

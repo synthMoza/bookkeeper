@@ -14,6 +14,8 @@ class ExpensesController(QtCore.QObject):
         Класс реализует паттерн Controller из архитектуры MVC для модели Expense
     """
 
+    update_budget_model_signal = QtCore.Signal()
+
     def __init__(self, expenses_repo: AbstractRepository[Expense], categories_repo: AbstractRepository[Category]) \
             -> None:
         super().__init__()
@@ -86,6 +88,8 @@ class ExpensesController(QtCore.QObject):
                 item.setData(QtGui.Qt.ItemDataRole.UserRole, expense.pk)
                 self.model.setItem(row, i, item)
 
+        self.update_budget_model_signal.emit()
+
     def delete_expense(self, pk: int) -> None:
         """
         Удалить затрату из репозитория
@@ -108,6 +112,4 @@ class ExpensesController(QtCore.QObject):
         category_id - ключ категории
         """
 
-        expenses = self.expenses_repo.get_all({"category_id": category_id})
-        for expense in expenses:
-            self.expenses_repo.delete(expense.pk)
+        Expense.delete_expenses_of_category(self.expenses_repo, category_id)

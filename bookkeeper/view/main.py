@@ -1,6 +1,6 @@
 import sys
 
-from PySide6 import QtWidgets
+from PySide6 import QtWidgets, QtGui
 from bookkeeper.view.main_widgets.main_window import MainWindow
 
 app_title = "The Bookkeeper App"
@@ -15,6 +15,9 @@ def main() -> None:
 
     window = MainWindow()
     window.setWindowTitle(app_title)
+
+    icon = QtGui.QIcon('icon.png')
+    window.setWindowIcon(icon)
     window.show()
 
     sys.exit(app.exec())

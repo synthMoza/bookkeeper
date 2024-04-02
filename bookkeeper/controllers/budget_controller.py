@@ -1,4 +1,4 @@
-from PySide6 import QtWidgets, QtCore
+from PySide6 import QtWidgets, QtCore, QtGui
 
 from bookkeeper.view.utility_widgets.table_widget import TableWidget
 from bookkeeper.repository.abstract_repository import AbstractRepository
@@ -13,22 +13,14 @@ class BudgetController(QtCore.QObject):
         Класс реализует паттерн Controller из архитектуры MVC для модели Budget
     """
 
-    interval_column: int = 0
-    sum_column: int = 1
-    limit_sum_column: int = 2
-
-    day_row: int = 0
-    week_row: int = 1
-    month_row: int = 2
-
     day_sum_default = 1000
     week_sum_default = 7000
     month_sum_default = 30000
 
     def __init__(self, expenses_repo: AbstractRepository[Expense], budget_repo: AbstractRepository[Budget]) -> None:
         super().__init__()
-        self.budget_repo: AbstractRepository[Budget] = budget_repo
         self.expenses_repo: AbstractRepository[Expense] = expenses_repo
+        self.budget_repo = budget_repo
         self.model: TableWidget | None = None
 
     def set_model(self, model: TableWidget) -> None:
@@ -38,84 +30,58 @@ class BudgetController(QtCore.QObject):
         """
 
         if not self.model:
-            self.model: TableWidget = model
+            self.model = model
 
-    def add_last_expenses(self, interval: str) -> None:
-        """
-        Найти затраты за выбранный временной промежуток
+    def init_model(self) -> None:
+        budgets = [
+            Budget('День', 0, self.day_sum_default),
+            Budget('Неделя', 0, self.week_sum_default),
+            Budget('Месяц', 0, self.month_sum_default),
+        ]
 
-        Parameters
-        ----------
-        interval - временной промежуток ('day', 'week', 'month')
+        for budget in budgets:
+            self.budget_repo.add(budget)
 
-        Returns
-        -------
-        Список подходящих затрат
-        """
-        all_expenses = self.expenses_repo.get_all()
-        last_expenses = []
+        self.update_model()
+        self.model.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.DoubleClicked)
+        self.model.cellChanged.connect(self.cell_changed_callback)
 
-        if interval == 'day':
-            row = self.day_row
-            russian_name = 'День'
+    def cell_changed_callback(self):
+        day_limit_amount_item = self.model.item(0, 2)
+        week_limit_amount_item = self.model.item(1, 2)
+        month_limit_amount_item = self.model.item(2, 2)
 
-            def comparator(x: datetime.datetime, y: datetime.datetime): return (x.year == y.year and x.month == y.month
-                                                                                and x.day == y.day)
-        elif interval == 'week':
-            row = self.week_row
-            russian_name = 'Неделя'
+        day_budget = self.budget_repo.get(day_limit_amount_item.data(QtCore.Qt.ItemDataRole.UserRole))
+        week_budget = self.budget_repo.get(week_limit_amount_item.data(QtCore.Qt.ItemDataRole.UserRole))
+        month_budget = self.budget_repo.get(month_limit_amount_item.data(QtCore.Qt.ItemDataRole.UserRole))
 
-            def comparator(x: datetime.datetime, y: datetime.datetime): return (x.isocalendar().week ==
-                                                                                y.isocalendar().week)
-        elif interval == 'month':
-            row = self.month_row
-            russian_name = 'Месяц'
+        day_budget.limit_amount = float(day_limit_amount_item.text())
+        week_budget.limit_amount = float(week_limit_amount_item.text())
+        month_budget.limit_amount = float(month_limit_amount_item.text())
 
-            def comparator(x: datetime.datetime, y: datetime.datetime): return x.year == y.year and x.month == y.month
-        else:
-            raise KeyError(f'unknown interval {interval}')
-
-        current_date = datetime.datetime.today()
-        for expense in all_expenses:
-            if comparator(expense.date, current_date):
-                last_expenses.append(expense)
-
-        limit_amount = self.model.item(row, self.limit_sum_column).data(QtCore.Qt.ItemDataRole.UserRole)
-        budget = Budget(russian_name, sum([e.amount for e in last_expenses]), limit_amount)
-        self.budget_repo.add(budget)
-
-    def update_budget_repo(self):
-        self.add_last_expenses('day')
-        self.add_last_expenses('week')
-        self.add_last_expenses('month')
+        self.budget_repo.update(day_budget)
+        self.budget_repo.update(week_budget)
+        self.budget_repo.update(month_budget)
 
     def update_model(self):
-        # First column - durations (day, week, month)
-        item = QtWidgets.QTableWidgetItem('День')
-        item.setFlags(item.flags() ^ QtCore.Qt.ItemFlag.ItemIsEditable)
-        self.model.setItem(self.day_row, self.interval_column, item)
+        budgets = self.budget_repo.get_all()
+        for budget in budgets:
+            budget.update_amount(self.expenses_repo)
 
-        item = QtWidgets.QTableWidgetItem('Неделя')
-        item.setFlags(item.flags() ^ QtCore.Qt.ItemFlag.ItemIsEditable)
-        self.model.setItem(self.week_row, self.interval_column, item)
+        for i, budget in enumerate(budgets):
+            self.budget_repo.update(budget)
 
-        item = QtWidgets.QTableWidgetItem('Месяц')
-        item.setFlags(item.flags() ^ QtCore.Qt.ItemFlag.ItemIsEditable)
-        self.model.setItem(self.month_row, self.interval_column, item)
+            item = QtWidgets.QTableWidgetItem(budget.interval)
+            item.setData(QtCore.Qt.ItemDataRole.UserRole, budget.pk)
+            item.setFlags(item.flags() & ~QtCore.Qt.ItemFlag.ItemIsEditable)
+            self.model.setItem(i, 0, item)
 
-        # Seconds column - aggregated expenses during given periods
-        #self.budget_repo.get()
+            amount_item = QtWidgets.QTableWidgetItem(str(budget.amount))
+            amount_item.setFlags(item.flags() & ~QtCore.Qt.ItemFlag.ItemIsEditable)
+            amount_item.setData(QtCore.Qt.ItemDataRole.UserRole, budget.pk)
+            self.model.setItem(i, 1, amount_item)
 
-        # Third column - editable budget limits
-        day_budget_item = QtWidgets.QTableWidgetItem('1000')
-        day_budget_item.setData(QtCore.Qt.ItemDataRole.UserRole, 1000)
-        day_budget_item.setFlags(day_budget_item.flags() | QtCore.Qt.ItemFlag.ItemIsEditable)
-        self.model.setItem(self.day_row, self.limit_sum_column, day_budget_item)
-
-        week_budget_item = QtWidgets.QTableWidgetItem('7000')
-        week_budget_item.setFlags(week_budget_item.flags() | QtCore.Qt.ItemFlag.ItemIsEditable)
-        self.model.setItem(self.week_row, self.limit_sum_column, week_budget_item)
-
-        month_budget_item = QtWidgets.QTableWidgetItem('30000')
-        month_budget_item.setFlags(month_budget_item.flags() | QtCore.Qt.ItemFlag.ItemIsEditable)
-        self.model.setItem(self.month_row, self.limit_sum_column, month_budget_item)
+            limit_amount_item = QtWidgets.QTableWidgetItem(str(budget.limit_amount))
+            limit_amount_item.setData(QtCore.Qt.ItemDataRole.UserRole, budget.pk)
+            limit_amount_item.setData(QtCore.Qt.ItemDataRole.UserRole, budget.pk)
+            self.model.setItem(i, 2, limit_amount_item)

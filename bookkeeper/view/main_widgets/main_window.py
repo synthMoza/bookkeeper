@@ -24,6 +24,7 @@ class MainWindow(QtWidgets.QWidget):
         self.db_file = "book_keeper.db"
         self.create_categories_table()
         self.create_expenses_table()
+        self.create_budget_table()
 
         self.categories_repository = SQLiteRepository(self.db_file, Category)
         self.expenses_repository = SQLiteRepository(self.db_file, Expense)
@@ -42,6 +43,7 @@ class MainWindow(QtWidgets.QWidget):
         # set up signals
         self.expenses_view_widget.edit_expense_signal.connect(self.expenses_add_widget.edit_expense)
         self.categories_controller.delete_expense_signal.connect(self.expenses_controller.delete_expenses_of_category)
+        self.expenses_controller.update_budget_model_signal.connect(self.budget_controller.update_model)
 
         # initial trigger
         self.expenses_controller.update_model()
@@ -76,4 +78,13 @@ class MainWindow(QtWidgets.QWidget):
                 "CREATE TABLE IF NOT EXISTS Expense "
                 "(pk INTEGER PRIMARY KEY, amount REAL, category_id INTEGER, "
                 "date DATETIME, comment TEXT,  FOREIGN KEY (category_id) REFERENCES Category(pk))"
+            )
+
+    def create_budget_table(self):
+        with sqlite3.connect(self.db_file) as con:
+            cur = con.cursor()
+            cur.execute(
+                "CREATE TABLE IF NOT EXISTS Budget "
+                "(pk INTEGER PRIMARY KEY, interval TEXT, amount REAL, "
+                "limit_amount REAL)"
             )

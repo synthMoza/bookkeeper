@@ -15,11 +15,14 @@ class BudgetViewWidget(QtWidgets.QWidget):
 
         self.labels = ["", "Сумма", "Бюджет"]
         self.budget_table = TableWidget(3, 3, self.labels)
+        self.budget_table.horizontalHeader().setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
+        self.budget_table.horizontalHeader().setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeMode.Stretch)
+        self.budget_table.horizontalHeader().setSectionResizeMode(2, QtWidgets.QHeaderView.ResizeMode.Stretch)
 
         self.layout.addWidget(self.label)
         self.layout.addWidget(self.budget_table)
         self.setLayout(self.layout)
 
         self.controller.set_model(self.budget_table)
-        self.controller.update_model()
+        self.controller.init_model()
 
