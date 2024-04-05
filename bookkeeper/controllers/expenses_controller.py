@@ -1,12 +1,10 @@
+# type: ignore
 from PySide6 import QtWidgets, QtGui, QtCore
 
-from typing import List
 from bookkeeper.repository.abstract_repository import AbstractRepository
 from bookkeeper.models.expense import Expense
 from bookkeeper.models.category import Category
 from bookkeeper.view.utility_widgets.table_widget import TableWidget
-
-import datetime
 
 
 class ExpensesController(QtCore.QObject):
@@ -16,8 +14,8 @@ class ExpensesController(QtCore.QObject):
 
     update_budget_model_signal = QtCore.Signal()
 
-    def __init__(self, expenses_repo: AbstractRepository[Expense], categories_repo: AbstractRepository[Category]) \
-            -> None:
+    def __init__(self, expenses_repo: AbstractRepository[Expense],
+                 categories_repo: AbstractRepository[Category]) -> None:
         super().__init__()
         self.expenses_repo = expenses_repo
         self.categories_repo = categories_repo
@@ -25,7 +23,8 @@ class ExpensesController(QtCore.QObject):
 
     def set_model(self, model: TableWidget) -> None:
         """
-        Установить соответствующую модель. Необходимо вынести в отдельную функцию, т.к. модели еще нет
+        Установить соответствующую модель. Необходимо вынести
+        в отдельную функцию, т.к. модели еще нет
         при инициализации контроллера
         """
 

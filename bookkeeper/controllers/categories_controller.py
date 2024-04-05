@@ -1,3 +1,4 @@
+# type: ignore
 from PySide6 import QtGui, QtCore
 
 from bookkeeper.repository.abstract_repository import AbstractRepository
@@ -19,7 +20,8 @@ class CategoriesController(QtCore.QObject):
 
     def set_model(self, model: QtGui.QStandardItemModel) -> None:
         """
-        Установить соответствующую модель. Необходимо вынести в отдельную функцию, т.к. модели еще нет
+        Установить соответствующую модель. Необходимо вынести
+        в отдельную функцию, т.к. модели еще нет
         при инициализации контроллера
         """
 
@@ -41,10 +43,13 @@ class CategoriesController(QtCore.QObject):
 
         return self.repo.get(pk)
 
-    def update_model(self):
+    def update_model(self) -> None:
         """
         Обновить внутреннюю модель значениями категорий из репозитория.
         """
+
+        if not self.model:
+            raise ValueError('model has not been set')
 
         all_categories = self.repo.get_all()
 
@@ -60,7 +65,7 @@ class CategoriesController(QtCore.QObject):
                 parent_item = categories_dict[category.parent]
                 parent_item.appendRow(item)
 
-    def add_category(self, c: Category):
+    def add_category(self, c: Category) -> None:
         """
         Добавить новую категорию в репозиторий. Если она уже существует,
         то она не обновится.
@@ -109,6 +114,9 @@ class CategoriesController(QtCore.QObject):
         idx - индекс родительской категории или None
         """
 
+        if not self.model:
+            raise ValueError('model has not been set')
+
         standard_name = 'Новая категория'
         item = QtGui.QStandardItem(standard_name)
 
@@ -125,13 +133,17 @@ class CategoriesController(QtCore.QObject):
 
     def delete_category_from_model(self, idx: QtCore.QModelIndex | None):
         """
-        Полностью удалить категорию из модели. Использует сигнал к ExpensesController для удаления всех затрат
+        Полностью удалить категорию из модели. Использует сигнал
+        к ExpensesController для удаления всех затрат
         данной категории и всех подкатегорий
 
         Parameters
         ----------
         idx - индекс категории
         """
+
+        if not self.model:
+            raise ValueError('model has not been set')
 
         item = self.model.itemFromIndex(idx)
 

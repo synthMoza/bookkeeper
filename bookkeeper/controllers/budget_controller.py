@@ -1,11 +1,10 @@
-from PySide6 import QtWidgets, QtCore, QtGui
+# type: ignore
+from PySide6 import QtWidgets, QtCore
 
 from bookkeeper.view.utility_widgets.table_widget import TableWidget
 from bookkeeper.repository.abstract_repository import AbstractRepository
 from bookkeeper.models.budget import Budget
 from bookkeeper.models.expense import Expense
-
-import datetime
 
 
 class BudgetController(QtCore.QObject):
@@ -17,15 +16,18 @@ class BudgetController(QtCore.QObject):
     week_sum_default = 7000
     month_sum_default = 30000
 
-    def __init__(self, expenses_repo: AbstractRepository[Expense], budget_repo: AbstractRepository[Budget]) -> None:
+    def __init__(self, expenses_repo: AbstractRepository[Expense],
+                 budget_repo: AbstractRepository[Budget]) -> None:
         super().__init__()
-        self.expenses_repo: AbstractRepository[Expense] = expenses_repo
+        self.expenses_repo: AbstractRepository[Expense] = (
+            expenses_repo)
         self.budget_repo = budget_repo
         self.model: TableWidget | None = None
 
     def set_model(self, model: TableWidget) -> None:
         """
-        Установить соответствующую модель. Необходимо вынести в отдельную функцию, т.к. модели еще нет
+        Установить соответствующую модель. Необходимо вынести
+        в отдельную функцию, т.к. модели еще нет
         при инициализации контроллера
         """
 
@@ -51,9 +53,12 @@ class BudgetController(QtCore.QObject):
         week_limit_amount_item = self.model.item(1, 2)
         month_limit_amount_item = self.model.item(2, 2)
 
-        day_budget = self.budget_repo.get(day_limit_amount_item.data(QtCore.Qt.ItemDataRole.UserRole))
-        week_budget = self.budget_repo.get(week_limit_amount_item.data(QtCore.Qt.ItemDataRole.UserRole))
-        month_budget = self.budget_repo.get(month_limit_amount_item.data(QtCore.Qt.ItemDataRole.UserRole))
+        day_budget = self.budget_repo.get(
+            day_limit_amount_item.data(QtCore.Qt.ItemDataRole.UserRole))
+        week_budget = self.budget_repo.get(
+            week_limit_amount_item.data(QtCore.Qt.ItemDataRole.UserRole))
+        month_budget = self.budget_repo.get(
+            month_limit_amount_item.data(QtCore.Qt.ItemDataRole.UserRole))
 
         day_budget.limit_amount = float(day_limit_amount_item.text())
         week_budget.limit_amount = float(week_limit_amount_item.text())

@@ -1,10 +1,14 @@
-from inspect import get_annotations
+"""
+Модуль с описанием реализации репозитория на основе sqlite
+"""
 
-from bookkeeper.repository.abstract_repository import AbstractRepository, T
+from inspect import get_annotations
+from typing import Any, Dict, Type, get_args
 from datetime import datetime
-from typing import Any, Dict, Union, get_origin, get_args
 
 import sqlite3
+
+from bookkeeper.repository.abstract_repository import AbstractRepository, T
 
 
 class SQLiteRepository(AbstractRepository[T]):
@@ -13,15 +17,19 @@ class SQLiteRepository(AbstractRepository[T]):
         через SQL запросы
     """
 
-    def __init__(self, db_file: str, cls: type) -> None:
+    def __init__(self, db_file: str, cls: Type[T]) -> None:
         self.db_file = db_file
         self.table_name = cls.__name__.lower()
         self.fields = get_annotations(cls, eval_str=True)
         self.fields.pop('pk')
-        self.generic_type = cls
+        self.generic_type: Type[T] = cls
 
     @staticmethod
-    def set_pragmas(cur):
+    def set_pragmas(cur: sqlite3.Cursor) -> None:
+        """
+        Установить в курсор необходимые pragma
+        """
+
         cur.execute('PRAGMA foreign_keys = ON')
 
     _types: Dict[type, str] = {
@@ -32,38 +40,46 @@ class SQLiteRepository(AbstractRepository[T]):
     }
 
     def create_table(self) -> None:
+        """
+        Создать дефолтную таблицу в базе данных
+        """
+
         with sqlite3.connect(self.db_file) as con:
             cur = con.cursor()
             self.set_pragmas(cur)
+            fields = ', '.join([f'{k} {self._types[v]}' for k, v in self.fields.items()])
             cur.execute(
                 f"CREATE TABLE IF NOT EXISTS {self.table_name} "
-                f"(pk INTEGER PRIMARY KEY, {', '.join([f'{k} {self._types[v]}' for k, v in self.fields.items()])})"
+                f"(pk INTEGER PRIMARY KEY, {fields})"
             )
 
     def add(self, obj: T) -> int:
         if getattr(obj, 'pk', None) is None:
             raise ValueError(f'trying to add object {obj} without `pk` attribute')
-        elif getattr(obj, 'pk', None) != 0:
+        if getattr(obj, 'pk', None) != 0:
             raise ValueError(f'trying to add object {obj} with filled `pk` attribute')
 
         names = ', '.join(self.fields.keys())
-        p = ', '.join("?" * len(self.fields))
+        parameters = ', '.join("?" * len(self.fields))
 
         values = [self._attr_to_sql(getattr(obj, x)) for x in self.fields]
         with sqlite3.connect(self.db_file) as con:
             cur = con.cursor()
             self.set_pragmas(cur)
-            q = f'INSERT INTO {self.table_name}({names}) VALUES({p})'
-            cur.execute(q, values)
-            obj.pk = cur.lastrowid
+            query = f'INSERT INTO {self.table_name}({names}) VALUES({parameters})'
+            cur.execute(query, values)
+            if cur.lastrowid is not None:
+                obj.pk = cur.lastrowid
+            else:
+                raise RuntimeError('failed to insert')
         con.close()
         return obj.pk
 
-    def get(self, pk: int) -> T | None:
+    def get(self, primary_key: int) -> T | None:
         with sqlite3.connect(self.db_file) as con:
             cur = con.cursor()
             self.set_pragmas(cur)
-            cur.execute(f'SELECT * FROM {self.table_name} WHERE pk={pk}')
+            cur.execute(f'SELECT * FROM {self.table_name} WHERE pk={primary_key}')
             raw_obj = cur.fetchone()
             if raw_obj is None:
                 return None
@@ -75,11 +91,12 @@ class SQLiteRepository(AbstractRepository[T]):
             cur = con.cursor()
             self.set_pragmas(cur)
             if where:
-                q = f'SELECT * FROM {self.table_name} WHERE {", ".join([f"{k}=?" for k in where.keys()])}'
-                cur.execute(q, [self._attr_to_sql(v) for v in where.values()])
+                conditions = ", ".join([f"{k}=?" for k in where.keys()])
+                query = f'SELECT * FROM {self.table_name} WHERE {conditions}'
+                cur.execute(query, [self._attr_to_sql(v) for v in where.values()])
             else:
-                q = f'SELECT * FROM {self.table_name}'
-                cur.execute(q)
+                query = f'SELECT * FROM {self.table_name}'
+                cur.execute(query)
             raw_objs = cur.fetchall()
             if not raw_objs:
                 return []
@@ -88,72 +105,83 @@ class SQLiteRepository(AbstractRepository[T]):
 
     datetime_format = '%Y-%m-%d %H:%M:%S'
 
-    def _attr_to_sql(self, v):
-        if isinstance(v, str):
-            return v
-        elif isinstance(v, datetime):
-            return f'{datetime.strftime(v, self.datetime_format)}'
-        elif v is None:
+    def _attr_to_sql(self, value: Any) -> str:
+        if isinstance(value, str):
+            return value
+        if isinstance(value, datetime):
+            return f'{datetime.strftime(value, self.datetime_format)}'
+        if value is None:
             return 'NULL'
-        else:
-            return str(v)
+        return str(value)
 
-    def _sql_to_attr(self, f, v):
-        if v == 'NULL':
+    def _sql_to_attr(self, field: Type[Any], value: Any) -> Any:
+        if value == 'NULL':
             return None
-        elif str == f or str in get_args(f):
-            v = v.strip('\'')
-            return str(v)
-        elif datetime == f or datetime in get_args(f):
-            v = v.strip('\'')
-            return datetime.strptime(v, self.datetime_format)
-        else:
-            return v
+        if str == field or str in get_args(field):
+            value = value.strip('\'')
+            return str(value)
+        if datetime == field or datetime in get_args(field):
+            value = value.strip('\'')
+            return datetime.strptime(value, self.datetime_format)
+        return value
 
-    def _to_obj(self, raw_obj, desc):
+    def _to_obj(self, raw_obj: Any, desc: Any) -> T:
         obj = self.generic_type.__new__(self.generic_type)
         setattr(obj, 'pk', raw_obj[0])
-        for i, f in enumerate(desc):
-            if f[0] in self.fields:
-                t = self.fields[f[0]]
-                setattr(obj, f[0], self._sql_to_attr(t, raw_obj[i]))
+        for i, field in enumerate(desc):
+            if field[0] in self.fields:
+                field_val = self.fields[field[0]]
+                setattr(obj, field[0], self._sql_to_attr(field_val, raw_obj[i]))
             else:
-                setattr(obj, f[0], raw_obj[i])
+                setattr(obj, field[0], raw_obj[i])
 
         return obj
 
     def update(self, obj: T) -> None:
         if getattr(obj, 'pk', None) is None:
-            raise ValueError(f'trying to update object {obj} without `pk` attribute')
+            raise ValueError(f'trying to update object {obj} '
+                             f'without `pk` attribute')
         if self.get(obj.pk) is None:
-            raise ValueError(f'trying to update object {obj} that is not in the repository')
+            raise ValueError(f'trying to update object {obj} '
+                             f'that is not in the repository')
 
         with sqlite3.connect(self.db_file) as con:
             cur = con.cursor()
             self.set_pragmas(cur)
-            q = f"UPDATE {self.table_name} SET {', '.join([f'{v}=?' for v in self.fields.keys()])} WHERE pk={obj.pk}"
-            cur.execute(q, [self._attr_to_sql(getattr(obj, v)) for v in self.fields.keys()])
+            fields = ', '.join([f'{v}=?' for v in self.fields.keys()])
+            query = f"UPDATE {self.table_name} SET {fields} WHERE pk={obj.pk}"
+            values = [self._attr_to_sql(getattr(obj, v)) for v in self.fields.keys()]
+            cur.execute(query, values)
 
-    def delete(self, pk: int) -> None:
-        if self.get(pk) is None:
-            raise KeyError(f"failed to find object with pk={pk} in the repository")
+    def delete(self, primary_key: int) -> None:
+        if self.get(primary_key) is None:
+            raise KeyError(f"failed to find object with "
+                           f"pk={primary_key} in the repository")
 
         with sqlite3.connect(self.db_file) as con:
             cur = con.cursor()
             self.set_pragmas(cur)
-            q = f"DELETE FROM {self.table_name} WHERE pk= {pk}"
-            cur.execute(q)
+            query = f"DELETE FROM {self.table_name} WHERE pk= {primary_key}"
+            cur.execute(query)
 
     def delete_all(self) -> None:
-        with sqlite3.connect(self.db_file) as con:
-            cur = con.cursor()
-            self.set_pragmas(cur)
-            q = f"DELETE FROM {self.table_name}"
-            cur.execute(q)
+        """
+        Удалить все записи из базы данных
+        """
 
-    def drop_table(self):
         with sqlite3.connect(self.db_file) as con:
             cur = con.cursor()
             self.set_pragmas(cur)
-            q = f"DROP TABLE {self.table_name}"
-            cur.execute(q)
+            query = f"DELETE FROM {self.table_name}"
+            cur.execute(query)
+
+    def drop_table(self) -> None:
+        """
+        Удалить таблицу из нижележащей базы данных
+        """
+
+        with sqlite3.connect(self.db_file) as con:
+            cur = con.cursor()
+            self.set_pragmas(cur)
+            query = f"DROP TABLE {self.table_name}"
+            cur.execute(query)

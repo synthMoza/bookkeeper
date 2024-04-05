@@ -5,6 +5,7 @@ from datetime import datetime
 import pytest
 import sqlite3
 
+
 @dataclass
 class Custom():
     foo: str = 'check'
@@ -55,7 +56,7 @@ def test_cannot_add_without_pk(repo):
         repo.add(0)
 
 
-def test_cannot_delete_unexistent(repo):
+def test_cannot_delete_nonexistent(repo):
     with pytest.raises(KeyError):
         repo.delete(1)
 
@@ -98,6 +99,7 @@ def test_delete_all(repo, custom_class):
         objects.append(o)
     repo.delete_all()
     assert repo.get_all() == []
+
 
 def test_none_field(repo, custom_class):
     obj = custom_class()

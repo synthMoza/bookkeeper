@@ -32,13 +32,16 @@ class Budget:
         """
 
         if self.interval == 'День':
-            def comparator(x: datetime, y: datetime): return (x.year == y.year and x.month == y.month
-                                                                                and x.day == y.day)
+            def comparator(x: datetime, y: datetime) -> bool:
+                return (x.year == y.year and x.month == y.month
+                        and x.day == y.day)
         elif self.interval == 'Неделя':
-            def comparator(x: datetime, y: datetime): return (x.year == y.year and
-                                                              x.isocalendar().week == y.isocalendar().week)
+            def comparator(x: datetime, y: datetime) -> bool:
+                return (x.year == y.year and
+                        x.isocalendar().week == y.isocalendar().week)
         elif self.interval == 'Месяц':
-            def comparator(x: datetime, y: datetime): return x.year == y.year and x.month == y.month
+            def comparator(x: datetime, y: datetime) -> bool:
+                return x.year == y.year and x.month == y.month
         else:
             raise KeyError(f'unknown interval {self.interval}')
 

@@ -1,3 +1,9 @@
+"""
+Виджеты LabeledInput - именованные поля с возможностью ввода текста
+в различных модификациях
+"""
+
+from typing import Any
 from datetime import datetime
 
 from PySide6 import QtWidgets
@@ -5,8 +11,11 @@ from PySide6.QtCore import QDateTime
 from PySide6.QtGui import QDoubleValidator
 
 
-class LabeledInput(QtWidgets.QWidget):
-    def __init__(self, text, placeholder, *args, **kwargs):
+class LabeledInput(QtWidgets.QWidget):  # type: ignore
+    """
+    Именованный виджет с вводом текста
+    """
+    def __init__(self, text: str, placeholder: str, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.layout = QtWidgets.QHBoxLayout()
         self.input = QtWidgets.QLineEdit(placeholder)
@@ -19,22 +28,45 @@ class LabeledInput(QtWidgets.QWidget):
         self.layout.addWidget(self.input)
         self.setLayout(self.layout)
 
-    def get_text(self):
-        return self.input.text()
+    #  error: Returning Any from function declared to return "str"
+    def get_text(self) -> str:
+        """
+        Получить введенный в поле для вода текст
 
-    def set_placeholder(self, placeholder: str):
+        Returns
+        -------
+        Введенный в поле текст
+        """
+
+        return self.input.text()  # type: ignore
+
+    def set_placeholder(self, placeholder: str) -> None:
+        """
+        Установить новый placeholder для виджета с вводом текста
+
+        Parameters
+        ----------
+        placeholder - новый текст
+        """
+
         self.input.clear()
         self.input.insert(placeholder)
 
 
 class LabeledFloatInput(LabeledInput):
-    def __init__(self, text, placeholder, *args, **kwargs):
+    """
+    Именованный виджет с вводом текста и валидацией флотов
+    """
+    def __init__(self, text: str, placeholder: str, *args: Any, **kwargs: Any) -> None:
         super().__init__(text, placeholder, *args, **kwargs)
         self.input.setValidator(QDoubleValidator(self.input))
 
 
-class LabeledDateInput(QtWidgets.QWidget):
-    def __init__(self, text, placeholder, *args, **kwargs):
+class LabeledDateInput(QtWidgets.QWidget):  # type: ignore
+    """
+    Именованный виджет с вводом даты
+    """
+    def __init__(self, text: str, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.layout = QtWidgets.QHBoxLayout()
 
@@ -52,10 +84,22 @@ class LabeledDateInput(QtWidgets.QWidget):
         self.setLayout(self.layout)
 
     def get_datetime(self) -> datetime:
-        return datetime.strptime(self.input.dateTime().toString(self.qt_format), self.datetime_format)
+        """
+        Получить datetime из введенного в поле из qt формат в datetime формат
+
+        Returns
+        -------
+        datetime в нужном формате
+        """
+
+        return datetime.strptime(self.input.dateTime().toString(self.qt_format),
+                                 self.datetime_format)
 
 
 class LabeledReadOnlyBox(LabeledInput):
-    def __init__(self, text, placeholder, *args, **kwargs):
+    """
+    Именованный виджет с вводом текста с флагом readonly
+    """
+    def __init__(self, text: str, placeholder: str, *args: Any, **kwargs: Any) -> None:
         super().__init__(text, placeholder, *args, **kwargs)
         self.input.setReadOnly(True)

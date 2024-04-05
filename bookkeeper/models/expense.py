@@ -2,7 +2,7 @@
 Описан класс, представляющий расходную операцию
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 
 from typing import List
@@ -14,9 +14,9 @@ from bookkeeper.models.category import Category
 class Expense:
     """
     Расходная операция.
+    date - дата расхода
     amount - сумма расхода
     category_id - id категории расходов
-    date - дата расхода
     comment - комментарий к расходу
     pk - id записи в базе данных
     """
@@ -26,9 +26,10 @@ class Expense:
     comment: str = ''
     pk: int = 0
 
-    def get_rows(self, repo: AbstractRepository['Category']) -> List[str]:
+    def get_rows(self, repo: AbstractRepository[Category]) -> List[str]:
         """
-        Получить текстовое описание расхода для вставки в таблицу в порядке "дата, сумма, категория, комментарий"
+        Получить текстовое описание расхода для вставки в таблицу
+        в порядке "дата, сумма, категория, комментарий"
         в виде списка строк
 
         Parameters
@@ -40,15 +41,22 @@ class Expense:
         Список с текстовым описанием класса
         """
 
-        return [
-            self.date.strftime("%Y-%m-%d %H:%M:%S"),
-            str(self.amount),
-            repo.get(self.category_id).name,
-            self.comment,
-        ]
+        category = repo.get(self.category_id)
+
+        if category is not None:
+            return [
+                self.date.strftime("%Y-%m-%d %H:%M:%S"),
+                str(self.amount),
+                category.name,
+                self.comment,
+            ]
+
+        raise KeyError('no category_id in repo')
 
     @classmethod
-    def delete_expenses_of_category(cls, repo: AbstractRepository['Expense'], category_id: int):
+    def delete_expenses_of_category(cls,
+                                    repo: AbstractRepository['Expense'],
+                                    category_id: int) -> None:
         """
         Классовый метод для удаления конкретной категории из репозитория затрат
 

@@ -17,6 +17,13 @@ def category_repo():
     return MemoryRepository()
 
 
+def test_get_rows_with_wrong_category_id(category_repo):
+    d = datetime(1984, 11, 25, 9, 28, 34)
+    e = Expense(d, 100, 100500, 'test_comment')
+    with pytest.raises(KeyError):
+        rows = e.get_rows(category_repo)
+
+
 def test_create_with_full_args_list():
     d = datetime.now()
     e = Expense(amount=100, category_id=1, date=d, comment='test', pk=1)

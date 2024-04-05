@@ -21,14 +21,14 @@ class MemoryRepository(AbstractRepository[T]):
         if getattr(obj, 'pk', None) != 0:
             raise ValueError(f'trying to add object {obj} with filled `pk` attribute')
 
-        pk = next(self._counter)
-        self._container[pk] = obj
-        obj.pk = pk
+        primary_key = next(self._counter)
+        self._container[primary_key] = obj
+        obj.pk = primary_key
 
-        return pk
+        return primary_key
 
-    def get(self, pk: int) -> T | None:
-        return self._container.get(pk)
+    def get(self, primary_key: int) -> T | None:
+        return self._container.get(primary_key)
 
     def get_all(self, where: dict[str, Any] | None = None) -> list[T]:
         if where is None:
@@ -41,5 +41,5 @@ class MemoryRepository(AbstractRepository[T]):
             raise ValueError('attempt to update object with unknown primary key')
         self._container[obj.pk] = obj
 
-    def delete(self, pk: int) -> None:
-        self._container.pop(pk)
+    def delete(self, primary_key: int) -> None:
+        self._container.pop(primary_key)

@@ -7,6 +7,8 @@ from bookkeeper.models.expense import Expense
 from bookkeeper.repository.memory_repository import MemoryRepository
 from bookkeeper.utils import read_tree
 
+import datetime
+
 cat_repo = MemoryRepository[Category]()
 exp_repo = MemoryRepository[Expense]()
 
@@ -40,6 +42,7 @@ while True:
         except IndexError:
             print(f'категория {name} не найдена')
             continue
-        exp = Expense(int(amount), cat.pk)
+        exp = Expense(amount=int(amount), category_id=cat.pk,
+                      date=datetime.datetime.now())
         exp_repo.add(exp)
         print(exp)

@@ -1,11 +1,21 @@
-from PySide6 import QtWidgets, QtCore
+"""
+Модуль с описанием виджета для отображения бюджета
+"""
 
-from bookkeeper.controllers.budget_controller import BudgetController
+from typing import Any
+from PySide6 import QtWidgets
+
+from bookkeeper.controllers.budget_controller import BudgetController  # type: ignore
 from bookkeeper.view.utility_widgets.table_widget import TableWidget
 
 
-class BudgetViewWidget(QtWidgets.QWidget):
-    def __init__(self, budget_controller: BudgetController, *args, **kwargs):
+class BudgetViewWidget(QtWidgets.QWidget):  # type: ignore
+    """
+    Виджет отображения бюджетов на день, неделю и месяц с
+    возможностью редактирования лимитов
+    """
+
+    def __init__(self, budget_controller: BudgetController, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
         self.layout = QtWidgets.QVBoxLayout()
         self.controller = budget_controller
@@ -15,9 +25,14 @@ class BudgetViewWidget(QtWidgets.QWidget):
 
         self.labels = ["", "Сумма", "Бюджет"]
         self.budget_table = TableWidget(3, 3, self.labels)
-        self.budget_table.horizontalHeader().setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
-        self.budget_table.horizontalHeader().setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeMode.Stretch)
-        self.budget_table.horizontalHeader().setSectionResizeMode(2, QtWidgets.QHeaderView.ResizeMode.Stretch)
+
+        header = self.budget_table.horizontalHeader()
+        header.setSectionResizeMode(0,
+                                    QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(1,
+                                    QtWidgets.QHeaderView.ResizeMode.Stretch)
+        header.setSectionResizeMode(2,
+                                    QtWidgets.QHeaderView.ResizeMode.Stretch)
 
         self.layout.addWidget(self.label)
         self.layout.addWidget(self.budget_table)
@@ -25,4 +40,3 @@ class BudgetViewWidget(QtWidgets.QWidget):
 
         self.controller.set_model(self.budget_table)
         self.controller.init_model()
-
